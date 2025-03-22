@@ -1,126 +1,67 @@
-from collections import defaultdict, deque
-import heapq
-from typing import Dict, List, Tuple, Optional
+# 🚇 Proje Başlığı: Metro Simülasyonu (Rota Optimizasyonu)
 
-class Istasyon:
-    def __init__(self, idx: str, ad: str, hat: str):
-        self.idx = idx
-        self.ad = ad
-        self.hat = hat
-        self.komsular: List[Tuple['Istasyon', int]] = []
+## 📌 1. Kısa Açıklama
+Bu proje, bir metro ağı içerisinde **en az aktarmalı** ve **en hızlı rotayı** bulan bir simülasyon geliştirmeyi amaçlamaktadır. **BFS (Breadth-First Search)** ve **A* (A-Star)** algoritmaları kullanılarak rota optimizasyonu sağlanmıştır. Python ile geliştirilen proje, metro hatları arasında en uygun rotaları bulmak için graf veri yapısını kullanmaktadır.
 
-    def komsu_ekle(self, istasyon: 'Istasyon', sure: int):
-        self.komsular.append((istasyon, sure))
+---
 
-class MetroAgi:
-    def __init__(self):
-        self.istasyonlar: Dict[str, Istasyon] = {}
+## 📌 2. Kullanılan Teknolojiler ve Kütüphaneler
+Proje, aşağıdaki temel kütüphaneleri kullanmaktadır:
 
-    def istasyon_ekle(self, idx: str, ad: str, hat: str):
-        if idx not in self.istasyonlar:
-            istasyon = Istasyon(idx, ad, hat)
-            self.istasyonlar[idx] = istasyon
+- **Python 3.9+** → Projenin geliştirildiği programlama dili
+- **collections.deque** → BFS algoritmasında kuyruk yapısı için kullanılmıştır
+- **heapq** → A* algoritmasında öncelik kuyruğu oluşturmak için kullanılmıştır
+- **defaultdict** → Metro ağı verisini daha düzenli yönetmek için kullanılmıştır
 
-    def baglanti_ekle(self, istasyon1_id: str, istasyon2_id: str, sure: int):
-        istasyon1 = self.istasyonlar[istasyon1_id]
-        istasyon2 = self.istasyonlar[istasyon2_id]
-        istasyon1.komsu_ekle(istasyon2, sure)
-        istasyon2.komsu_ekle(istasyon1, sure)
-    
-    def en_az_aktarma_bul(self, baslangic_id: str, hedef_id: str) -> Optional[List[str]]:
-        if baslangic_id not in self.istasyonlar or hedef_id not in self.istasyonlar:
-            return None
-        
-        kuyruk = deque([(baslangic_id, [baslangic_id])])
-        ziyaret_edilen = set()
-        
-        while kuyruk:
-            mevcut_id, yol = kuyruk.popleft()
-            if mevcut_id == hedef_id:
-                return [self.istasyonlar[i].ad for i in yol]
-            
-            if mevcut_id in ziyaret_edilen:
-                continue
-            ziyaret_edilen.add(mevcut_id)
-            
-            for komsu, _ in self.istasyonlar[mevcut_id].komsular:
-                if komsu.idx not in ziyaret_edilen:
-                    kuyruk.append((komsu.idx, yol + [komsu.idx]))
-        
-        return None
+---
 
-    def en_hizli_rota_bul(self, baslangic_id: str, hedef_id: str) -> Optional[Tuple[List[str], int]]:
-        if baslangic_id not in self.istasyonlar or hedef_id not in self.istasyonlar:
-            return None
-        
-        pq = [(0, baslangic_id, [baslangic_id])]
-        ziyaret_edilen = {}
-        
-        while pq:
-            toplam_sure, mevcut_id, yol = heapq.heappop(pq)
-            
-            if mevcut_id == hedef_id:
-                return ([self.istasyonlar[i].ad for i in yol], toplam_sure)
-            
-            if mevcut_id in ziyaret_edilen and ziyaret_edilen[mevcut_id] <= toplam_sure:
-                continue
-            ziyaret_edilen[mevcut_id] = toplam_sure
-            
-            for komsu, sure in self.istasyonlar[mevcut_id].komsular:
-                heapq.heappush(pq, (toplam_sure + sure, komsu.idx, yol + [komsu.idx]))
-        
-        return None
+## 📌 3. Algoritmaların Çalışma Mantığı
 
-# Örnek kullanım ve testler
-if __name__ == "__main__":
-    metro = MetroAgi()
-    
-    # İstasyonlar ekleme
-    istasyonlar = [
-        ("M1", "AŞTİ", "Mavi Hat"),
-        ("M2", "Kızılay", "Mavi Hat"),
-        ("K1", "Kızılay", "Kırmızı Hat"),
-        ("K2", "Ulus", "Kırmızı Hat"),
-        ("K3", "Demetevler", "Kırmızı Hat"),
-        ("K4", "OSB", "Kırmızı Hat"),
-        ("M3", "Sıhhiye", "Mavi Hat"),
-        ("M4", "Gar", "Mavi Hat"),
-        ("T1", "Batıkent", "Turuncu Hat"),
-        ("T2", "Demetevler", "Turuncu Hat"),
-        ("T3", "Gar", "Turuncu Hat"),
-        ("T4", "Keçiören", "Turuncu Hat"),
-    ]
-    
-    for idx, ad, hat in istasyonlar:
-        metro.istasyon_ekle(idx, ad, hat)
-    
-    # Bağlantılar ekleme
-    baglantilar = [
-        ("M1", "M2", 5), ("M2", "K1", 2), ("K1", "K2", 4), ("K2", "K3", 6), ("K3", "K4", 8),
-        ("M2", "M3", 3), ("M3", "M4", 4), ("M4", "T3", 2),
-        ("T1", "T2", 7), ("T2", "T3", 9), ("T3", "T4", 5),
-        ("K3", "T2", 3)
-    ]
-    
-    for i1, i2, sure in baglantilar:
-        metro.baglanti_ekle(i1, i2, sure)
-    
-    # Test senaryoları ve çıktı doğrulama
-    testler = [
-        ("M1", "K4", "AŞTİ'den OSB'ye"),
-        ("T1", "T4", "Batıkent'ten Keçiören'e"),
-        ("T4", "M1", "Keçiören'den AŞTİ'ye"),
-    ]
-    
-    for baslangic, hedef, ad in testler:
-        print(f"\n{ad}:")
-        rota = metro.en_az_aktarma_bul(baslangic, hedef)
-        if rota:
-            print("En az aktarmalı rota:", " -> ".join(rota))
-        
-        sonuc = metro.en_hizli_rota_bul(baslangic, hedef)
-        if sonuc:
-            rota, sure = sonuc
-            print(f"En hızlı rota ({sure} dakika):", " -> ".join(rota))
+### 🔹 BFS (Breadth-First Search) – En Az Aktarmalı Rota
+- BFS, **en kısa yol algoritması** olarak kullanılır ve **genişlik öncelikli arama** yapar.
+- Başlangıç noktasından itibaren **katman katman** ilerleyerek en kısa istasyon zincirini bulur.
+- Kuyruk (queue) veri yapısını kullanarak, **önce eklenen istasyonları** işlemeye devam eder.
+- **En kısa aktarma sayısına sahip olan yolu** bulduğunda işlemi durdurur.
 
-    print("\nTestler tamamlandı, sistem başarıyla çalışıyor!")
+### 🔹 A* (A-Star) Algoritması – En Hızlı Rota
+- A* algoritması, **en düşük toplam süreyi** sağlayan yolu bulmak için kullanılır.
+- **Öncelik kuyruğu (heapq)** ile en düşük maliyetli adımı önce işler.
+- Her istasyonun **bir önceki istasyona olan süresini** hesaplayarak en hızlı rotayı oluşturur.
+- **Hedefe en hızlı ulaşan yol tamamlandığında** algoritma durur.
+
+**Neden BFS ve A* Kullanıldı?**
+- **BFS** → **En az aktarmalı rotayı** garantili bulur.
+- **A*** → **Toplam süreyi minimize eden en hızlı rotayı** bulur.
+- **Birlikte kullanıldığında**, hem **yolculuk süresini**, hem de **aktarma sayısını** optimize eder.
+
+---
+
+## 📌 4. Örnek Kullanım ve Test Sonuçları
+
+Aşağıda verilen test senaryoları, metro simülasyonunun doğruluğunu göstermek için çalıştırılmıştır.
+
+```python
+metro = MetroAgi()
+metro.en_az_aktarma_bul("M1", "K4")  # En az aktarmalı rota
+metro.en_hizli_rota_bul("M1", "K4")  # En hızlı rota
+```
+
+### 📝 Test Senaryoları
+| Başlangıç | Hedef | En Az Aktarma | En Hızlı Rota (Dakika) |
+|-----------|-------|--------------|------------------|
+| AŞTİ | OSB | AŞTİ → Kızılay → Ulus → Demetevler → OSB | 25 |
+| Batıkent | Keçiören | Batıkent → Demetevler → Gar → Keçiören | 21 |
+| Keçiören | AŞTİ | Keçiören → Gar → Sıhhiye → Kızılay → AŞTİ | 19 |
+
+---
+
+## 📌 5. Projeyi Geliştirme Fikirleri
+- **📍 Gerçek zamanlı veri entegrasyonu:** Trafik yoğunluğunu da hesaplayarak en hızlı rotayı daha dinamik hale getirme
+- **🛤️ Görselleştirme ekleme:** Matplotlib veya NetworkX ile metro ağı haritası oluşturma
+- **📊 Veri analizi:** En sık kullanılan hatları analiz etme ve yolcu akışını optimize etme
+- **🗺️ Daha büyük metro ağı entegrasyonu:** Gerçek dünya metro verilerini içeren daha geniş bir simülasyon geliştirme
+
+---
+
+✅ **Proje tamamlandı ve başarılı şekilde test edildi!** Eğer yeni özellikler eklemek istersen, yukarıdaki geliştirme fikirlerini deneyebilirsin. 🚀😊
+
